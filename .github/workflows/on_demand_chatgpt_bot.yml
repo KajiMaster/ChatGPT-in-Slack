@@ -17,7 +17,10 @@ jobs:
           node-version: '16'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --verbose
+
+      - name: List node_modules to verify @slack/web-api
+        run: ls -R node_modules/@slack
 
       - name: Run ChatGPT Slack Bot
         env:
