@@ -7,32 +7,46 @@ const slackClient = new WebClient(slackToken);
 
 (async () => {
   try {
-    // Fetch recent messages mentioning the bot
-    const result = await slackClient.conversations.history({
-      channel: 'YOUR_CHANNEL_ID', // Replace with the channel ID you want to poll
-      limit: 10,
+    // Step 1: Get bot's user ID
+    const authResult = await slackClient.auth.test();
+    const botUserId = authResult.user_id;
+
+    // Step 2: Retrieve a list of all channels the bot is part of
+    const channelsResult = await slackClient.conversations.list({
+      types: 'public_channel,private_channel',
     });
 
-    for (const message of result.messages) {
-      if (message.text.includes('<@YOUR_BOT_USER_ID>')) { // Replace with your bot's user ID
-        // Send message text to ChatGPT for a response
-        const chatGptResponse = await axios.post(
-          'https://api.openai.com/v1/completions',
-          {
-            model: 'text-davinci-003',
-            prompt: message.text,
-            max_tokens: 50,
-          },
-          {
-            headers: { Authorization: `Bearer ${openAiKey}` },
-          }
-        );
+    const channels = channelsResult.channels.filter(channel => channel.is_member);
 
-        // Post ChatGPT's response back to Slack
-        await slackClient.chat.postMessage({
-          channel: message.channel,
-          text: chatGptResponse.data.choices[0].text.trim(),
-        });
+    // Step 3: Loop through each channel and check recent messages
+    for (const channel of channels) {
+      const result = await slackClient.conversations.history({
+        channel: channel.id,
+        limit: 10,  // Adjust as needed to check more or fewer messages
+      });
+
+      // Step 4: Process messages that mention the bot
+      for (const message of result.messages) {
+        if (message.text.includes(`<@${botUserId}>`)) {
+          // Generate a response using ChatGPT
+          const chatGptResponse = await axios.post(
+            'https://api.openai.com/v1/completions',
+            {
+              model: 'text-davinci-003',
+              prompt: message.text,
+              max_tokens: 50,
+            },
+            {
+              headers: { Authorization: `Bearer ${openAiKey}` },
+            }
+          );
+
+          // Post the response back to the channel
+          await slackClient.chat.postMessage({
+            channel: channel.id,
+            text: chatGptResponse.data.choices[0].text.trim(),
+          });
+        }
       }
     }
   } catch (error) {
