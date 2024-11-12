@@ -1,0 +1,44 @@
+{
+  "name": "chatgpt-in-slack",
+  "version": "1.0.0",
+  "description": "Introducing a transformative app for Slack users, specifically designed to enhance your communication with [ChatGPT](https://openai.com/blog/chatgpt)! This app enables seamless interaction with ChatGPT via Slack channels, optimizing your planning and writing processes by leveraging AI technology.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "asynckit": "^0.4.0",
+    "axios": "^1.7.7",
+    "delayed-stream": "^1.0.0",
+    "is-electron": "^2.2.2",
+    "eventemitter3": "^5.0.1",
+    "follow-redirects": "^1.15.9",
+    "is-stream": "^2.0.1",
+    "mime-db": "^1.52.0",
+    "mime-types": "^2.1.35",
+    "combined-stream": "^1.0.8",
+    "form-data": "^4.0.1",
+    "p-finally": "^1.0.0",
+    "p-retry": "^4.6.2",
+    "p-timeout": "^3.2.0",
+    "retry": "^0.13.1",
+    "p-queue": "^6.6.2",
+    "proxy-from-env": "^1.1.0",
+    "undici-types": "^6.19.8"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KajiMaster/ChatGPT-in-Slack.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KajiMaster/ChatGPT-in-Slack/issues"
+  },
+  "homepage": "https://github.com/KajiMaster/ChatGPT-in-Slack#readme"
+}
