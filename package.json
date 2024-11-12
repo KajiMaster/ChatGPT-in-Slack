@@ -7,6 +7,7 @@
     "test": "tests"
   },
   "dependencies": {
+    "@slack/web-api": "^7.3.4",
     "asynckit": "^0.4.0",
     "axios": "^1.7.7",
     "delayed-stream": "^1.0.0",

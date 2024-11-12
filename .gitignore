@@ -13,7 +13,7 @@ __pycache__/
 node_modules/
 .serverless/
 .requirements.zip
-package.json
-package-lock.json
+#package.json
+#package-lock.json
 .python-version
 unzip_requirements.py
