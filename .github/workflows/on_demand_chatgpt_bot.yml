@@ -2,6 +2,11 @@ name: Trigger ChatGPT Slack Bot
 
 on:
   workflow_dispatch: # Enables manual triggering from GitHub Actions
+    inputs: # Enables mention_payload for input for GHA
+      mention_payload:
+        description: "The message text from Slack"
+        required: true
+        default: ""
 
 jobs:
   run-bot:
