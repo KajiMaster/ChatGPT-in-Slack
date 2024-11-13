@@ -10,7 +10,7 @@ const slackClient = new WebClient(slackToken);
 const respondedMessages = new Set();  // Store timestamps of processed messages
 const TIMESTAMP_CLEANUP_INTERVAL = 4 * 60 * 60 * 1000;  // 4 hours in milliseconds
 const MESSAGE_EXPIRY_TIME = 12 * 60 * 60 * 1000;        // 12 hours in milliseconds
-const MESSAGE_THRESHOLD = 10 * 1000;  // 10 seconds in milliseconds
+const MESSAGE_THRESHOLD = 60 * 1000;  // 60 seconds in milliseconds
 
 // Periodic cleanup of old timestamps
 const cleanupInterval = setInterval(() => {
@@ -77,7 +77,12 @@ const cleanupInterval = setInterval(() => {
             new Promise((_, reject) => setTimeout(() => reject(new Error('ChatGPT response timeout')), 15000))  // 15-second timeout
           ]);
 
-          const responseText = chatGptResponse.data.choices[0].message.content.trim();
+          const responseText = chatGptResponse.data.choices[0]?.message?.content?.trim();
+          if (!responseText) {
+            console.error("No valid response text from ChatGPT.");
+            continue;
+          }
+
           console.log("ChatGPT response:", responseText);
 
           // Split the response if it exceeds Slack's 4000-character limit
@@ -88,10 +93,11 @@ const cleanupInterval = setInterval(() => {
               channel: channel.id,
               text: messageChunk,
             });
+            console.log("Posted message chunk to Slack:", messageChunk);
           }
 
-        } catch (error) {
-          console.error("Error with ChatGPT response:", error.message);
+        } catch (axiosError) {
+          console.error("Error with ChatGPT response:", axiosError.message, axiosError.response?.data || axiosError);
         }
       }
     }
