@@ -7,6 +7,20 @@ console.log("OpenAI API Key:", openAiKey ? "Loaded" : "Not found");
 console.log("Slack Bot Token:", slackToken ? "Loaded" : "Not found");
 
 const slackClient = new WebClient(slackToken);
+const respondedMessages = new Set();  // Store timestamps of processed messages
+const TIMESTAMP_CLEANUP_INTERVAL = 3600000;  // 1 hour in milliseconds
+const MESSAGE_EXPIRY_TIME = 24 * 60 * 60 * 1000;  // 24 hours in milliseconds
+
+// Periodically clean up old timestamps
+setInterval(() => {
+  const now = Date.now();
+  for (const ts of respondedMessages) {
+    if (now - parseFloat(ts) * 1000 > MESSAGE_EXPIRY_TIME) {
+      respondedMessages.delete(ts);  // Remove old message timestamps
+    }
+  }
+  console.log("Old timestamps cleaned up");
+}, TIMESTAMP_CLEANUP_INTERVAL);
 
 (async () => {
   try {
@@ -32,41 +46,45 @@ const slackClient = new WebClient(slackToken);
 
       // Step 4: Process messages that mention the bot
       for (const message of result.messages) {
-        if (message.text.includes(`<@${botUserId}>`)) {
-          console.log("Message found mentioning bot:", message.text);
+        // Skip if message was already processed or does not mention the bot
+        if (respondedMessages.has(message.ts) || !message.text.includes(`<@${botUserId}>`)) {
+          continue;
+        }
 
-          // Generate a response using ChatGPT
-          try {
-            const chatGptResponse = await axios.post(
-              'https://api.openai.com/v1/chat/completions',
-              {
-                model: "gpt-4o",  // Use the specific model name you have access to
-                messages: [
-                  { role: 'user', content: message.text }
-                ],
-                max_tokens: 200,
-              },
-              {
-                headers: { Authorization: `Bearer ${openAiKey}` },
-              }
-            );
+        console.log("Message found mentioning bot:", message.text);
+        respondedMessages.add(message.ts);  // Mark this message as responded to
 
-            const responseText = chatGptResponse.data.choices[0].message.content.trim();
-            console.log("ChatGPT response:", responseText);
-
-            // Split the response if it exceeds Slack's 4000-character limit
-            const chunkSize = 4000;
-            for (let i = 0; i < responseText.length; i += chunkSize) {
-              const messageChunk = responseText.substring(i, i + chunkSize);
-              await slackClient.chat.postMessage({
-                channel: channel.id,
-                text: messageChunk,
-              });
+        // Generate a response using ChatGPT
+        try {
+          const chatGptResponse = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+              model: "gpt-4o",  // Use the specific model name you have access to
+              messages: [
+                { role: 'user', content: message.text }
+              ],
+              max_tokens: 200,
+            },
+            {
+              headers: { Authorization: `Bearer ${openAiKey}` },
             }
+          );
 
-          } catch (axiosError) {
-            console.error("Error with OpenAI API request:", axiosError.response?.status, axiosError.response?.data);
+          const responseText = chatGptResponse.data.choices[0].message.content.trim();
+          console.log("ChatGPT response:", responseText);
+
+          // Split the response if it exceeds Slack's 4000-character limit
+          const chunkSize = 4000;
+          for (let i = 0; i < responseText.length; i += chunkSize) {
+            const messageChunk = responseText.substring(i, i + chunkSize);
+            await slackClient.chat.postMessage({
+              channel: channel.id,
+              text: messageChunk,
+            });
           }
+
+        } catch (axiosError) {
+          console.error("Error with OpenAI API request:", axiosError.response?.status, axiosError.response?.data);
         }
       }
     }
