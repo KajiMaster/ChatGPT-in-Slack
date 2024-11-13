@@ -14,7 +14,7 @@ const HISTORY_LIMIT = 5;              // Number of recent messages to retain in 
 const TIMESTAMP_CLEANUP_INTERVAL = 4 * 60 * 60 * 1000;  // 4 hours in milliseconds
 const MESSAGE_EXPIRY_TIME = 12 * 60 * 60 * 1000;        // 12 hours in milliseconds
 const CHANNEL_EXPIRY_TIME = 24 * 60 * 60 * 1000;        // Expire channels after 24 hours of inactivity
-const MESSAGE_THRESHOLD = 10 * 1000;  // 10 seconds in milliseconds
+const MESSAGE_THRESHOLD = 45 * 1000;  // 45 seconds in milliseconds
 
 // Periodic cleanup of old timestamps and inactive channels
 const cleanupInterval = setInterval(() => {
