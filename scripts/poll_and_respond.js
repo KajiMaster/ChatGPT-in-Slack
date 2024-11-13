@@ -8,9 +8,9 @@ console.log("Slack Bot Token:", slackToken ? "Loaded" : "Not found");
 
 const slackClient = new WebClient(slackToken);
 const respondedMessages = new Set();  // Store timestamps of processed messages
-const TIMESTAMP_CLEANUP_INTERVAL = 3600000;  // 1 hour in milliseconds
-const MESSAGE_EXPIRY_TIME = 24 * 60 * 60 * 1000;  // 24 hours in milliseconds
-const MESSAGE_THRESHOLD = 5 * 60 * 1000;  // 5 minutes in milliseconds
+const TIMESTAMP_CLEANUP_INTERVAL = 4 * 60 * 60 * 1000;  // 4 hours in milliseconds
+const MESSAGE_EXPIRY_TIME = 12 * 60 * 60 * 1000;        // 12 hours in milliseconds
+const MESSAGE_THRESHOLD = 10 * 1000;  // 10 seconds in milliseconds
 
 // Periodically clean up old timestamps
 setInterval(() => {
