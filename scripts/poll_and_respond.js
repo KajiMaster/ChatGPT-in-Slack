@@ -82,13 +82,21 @@ const cleanupInterval = setInterval(() => {
         }
 
         try {
+          // Create a structured message list to give context to ChatGPT
+          const formattedMessages = conversationHistory[channel.id].map((msg) => {
+            return {
+              role: msg.role,
+              content: msg.content,
+            };
+          });
+
           const chatGptResponse = await Promise.race([
             axios.post(
               'https://api.openai.com/v1/chat/completions',
               {
-                model: "gpt-4",
-                messages: conversationHistory[channel.id],
-                max_tokens: 200,
+                model: "gpt-4", // Use the specific model name
+                messages: formattedMessages,
+                max_tokens: 300,
               },
               {
                 headers: { Authorization: `Bearer ${openAiKey}` },
@@ -108,6 +116,7 @@ const cleanupInterval = setInterval(() => {
           // Add bot's response to the conversation history
           conversationHistory[channel.id].push({ role: 'assistant', content: responseText });
 
+          // Split the response if it exceeds Slack's 4000-character limit
           const chunkSize = 4000;
           for (let i = 0; i < responseText.length; i += chunkSize) {
             const messageChunk = responseText.substring(i, i + chunkSize);
