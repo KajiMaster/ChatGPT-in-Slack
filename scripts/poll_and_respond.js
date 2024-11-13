@@ -8,19 +8,34 @@ console.log("Slack Bot Token:", slackToken ? "Loaded" : "Not found");
 
 const slackClient = new WebClient(slackToken);
 const respondedMessages = new Set();  // Store timestamps of processed messages
+const conversationHistory = {};       // Store conversation history by channel
+const channelLastActive = {};         // Track last activity for each channel
+const HISTORY_LIMIT = 5;              // Number of recent messages to retain in history per channel
 const TIMESTAMP_CLEANUP_INTERVAL = 4 * 60 * 60 * 1000;  // 4 hours in milliseconds
 const MESSAGE_EXPIRY_TIME = 12 * 60 * 60 * 1000;        // 12 hours in milliseconds
-const MESSAGE_THRESHOLD = 60 * 1000;  // 60 seconds in milliseconds
+const CHANNEL_EXPIRY_TIME = 24 * 60 * 60 * 1000;        // Expire channels after 24 hours of inactivity
+const MESSAGE_THRESHOLD = 10 * 1000;  // 10 seconds in milliseconds
 
-// Periodic cleanup of old timestamps
+// Periodic cleanup of old timestamps and inactive channels
 const cleanupInterval = setInterval(() => {
   const now = Date.now();
+
+  // Cleanup expired message timestamps
   for (const ts of respondedMessages) {
     if (now - parseFloat(ts) * 1000 > MESSAGE_EXPIRY_TIME) {
-      respondedMessages.delete(ts);  // Remove old message timestamps
+      respondedMessages.delete(ts);
     }
   }
   console.log("Old timestamps cleaned up");
+
+  // Cleanup inactive channels
+  for (const channelId in channelLastActive) {
+    if (now - channelLastActive[channelId] > CHANNEL_EXPIRY_TIME) {
+      delete conversationHistory[channelId];
+      delete channelLastActive[channelId];
+      console.log(`Cleared conversation history for inactive channel: ${channelId}`);
+    }
+  }
 }, TIMESTAMP_CLEANUP_INTERVAL);
 
 (async () => {
@@ -58,6 +73,20 @@ const cleanupInterval = setInterval(() => {
         console.log("Message found mentioning bot:", message.text);
         respondedMessages.add(message.ts);  // Mark this message as responded to
 
+        // Update channel's last activity
+        channelLastActive[channel.id] = now;
+
+        // Add the new message to the conversation history
+        if (!conversationHistory[channel.id]) {
+          conversationHistory[channel.id] = [];
+        }
+        conversationHistory[channel.id].push({ role: 'user', content: message.text });
+
+        // Trim conversation history to the last HISTORY_LIMIT messages
+        if (conversationHistory[channel.id].length > HISTORY_LIMIT) {
+          conversationHistory[channel.id].shift();
+        }
+
         // Generate a response using ChatGPT with a timeout
         try {
           const chatGptResponse = await Promise.race([
@@ -65,9 +94,7 @@ const cleanupInterval = setInterval(() => {
               'https://api.openai.com/v1/chat/completions',
               {
                 model: "gpt-4",  // Use the specific model name you have access to
-                messages: [
-                  { role: 'user', content: message.text }
-                ],
+                messages: conversationHistory[channel.id],
                 max_tokens: 200,
               },
               {
@@ -84,6 +111,9 @@ const cleanupInterval = setInterval(() => {
           }
 
           console.log("ChatGPT response:", responseText);
+
+          // Add the bot's response to the conversation history
+          conversationHistory[channel.id].push({ role: 'assistant', content: responseText });
 
           // Split the response if it exceeds Slack's 4000-character limit
           const chunkSize = 4000;
