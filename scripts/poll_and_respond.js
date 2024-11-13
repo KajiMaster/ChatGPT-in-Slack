@@ -10,6 +10,7 @@ const slackClient = new WebClient(slackToken);
 const respondedMessages = new Set();  // Store timestamps of processed messages
 const TIMESTAMP_CLEANUP_INTERVAL = 3600000;  // 1 hour in milliseconds
 const MESSAGE_EXPIRY_TIME = 24 * 60 * 60 * 1000;  // 24 hours in milliseconds
+const MESSAGE_THRESHOLD = 5 * 60 * 1000;  // 5 minutes in milliseconds
 
 // Periodically clean up old timestamps
 setInterval(() => {
@@ -45,9 +46,12 @@ setInterval(() => {
       });
 
       // Step 4: Process messages that mention the bot
+      const now = Date.now();
       for (const message of result.messages) {
-        // Skip if message was already processed or does not mention the bot
-        if (respondedMessages.has(message.ts) || !message.text.includes(`<@${botUserId}>`)) {
+        const messageTime = parseFloat(message.ts) * 1000;
+
+        // Skip if message was already processed, does not mention the bot, or is older than the threshold
+        if (respondedMessages.has(message.ts) || !message.text.includes(`<@${botUserId}>`) || (now - messageTime > MESSAGE_THRESHOLD)) {
           continue;
         }
 
@@ -59,7 +63,7 @@ setInterval(() => {
           const chatGptResponse = await axios.post(
             'https://api.openai.com/v1/chat/completions',
             {
-              model: "gpt-4o",  // Use the specific model name you have access to
+              model: "gpt-4",  // Use the specific model name you have access to
               messages: [
                 { role: 'user', content: message.text }
               ],
