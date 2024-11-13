@@ -44,20 +44,26 @@ const slackClient = new WebClient(slackToken);
                 messages: [
                   { role: 'user', content: message.text }
                 ],
-                max_tokens: 50,
+                max_tokens: 200,
               },
               {
                 headers: { Authorization: `Bearer ${openAiKey}` },
               }
             );
 
-            console.log("ChatGPT response:", chatGptResponse.data.choices[0].message.content.trim());
+            const responseText = chatGptResponse.data.choices[0].message.content.trim();
+            console.log("ChatGPT response:", responseText);
 
-            // Post the response back to the channel
-            await slackClient.chat.postMessage({
-              channel: channel.id,
-              text: chatGptResponse.data.choices[0].message.content.trim(),
-            });
+            // Split the response if it exceeds Slack's 4000-character limit
+            const chunkSize = 4000;
+            for (let i = 0; i < responseText.length; i += chunkSize) {
+              const messageChunk = responseText.substring(i, i + chunkSize);
+              await slackClient.chat.postMessage({
+                channel: channel.id,
+                text: messageChunk,
+              });
+            }
+
           } catch (axiosError) {
             console.error("Error with OpenAI API request:", axiosError.response?.status, axiosError.response?.data);
           }
