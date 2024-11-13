@@ -12,8 +12,8 @@ const TIMESTAMP_CLEANUP_INTERVAL = 4 * 60 * 60 * 1000;  // 4 hours in millisecon
 const MESSAGE_EXPIRY_TIME = 12 * 60 * 60 * 1000;        // 12 hours in milliseconds
 const MESSAGE_THRESHOLD = 10 * 1000;  // 10 seconds in milliseconds
 
-// Periodically clean up old timestamps
-setInterval(() => {
+// Periodic cleanup of old timestamps
+const cleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const ts of respondedMessages) {
     if (now - parseFloat(ts) * 1000 > MESSAGE_EXPIRY_TIME) {
@@ -39,6 +39,7 @@ setInterval(() => {
     console.log("Channels found:", channels.map(c => c.name).join(", "));
 
     // Step 3: Loop through each channel and check recent messages
+    const now = Date.now();
     for (const channel of channels) {
       const result = await slackClient.conversations.history({
         channel: channel.id,
@@ -46,7 +47,6 @@ setInterval(() => {
       });
 
       // Step 4: Process messages that mention the bot
-      const now = Date.now();
       for (const message of result.messages) {
         const messageTime = parseFloat(message.ts) * 1000;
 
@@ -58,21 +58,24 @@ setInterval(() => {
         console.log("Message found mentioning bot:", message.text);
         respondedMessages.add(message.ts);  // Mark this message as responded to
 
-        // Generate a response using ChatGPT
+        // Generate a response using ChatGPT with a timeout
         try {
-          const chatGptResponse = await axios.post(
-            'https://api.openai.com/v1/chat/completions',
-            {
-              model: "gpt-4",  // Use the specific model name you have access to
-              messages: [
-                { role: 'user', content: message.text }
-              ],
-              max_tokens: 200,
-            },
-            {
-              headers: { Authorization: `Bearer ${openAiKey}` },
-            }
-          );
+          const chatGptResponse = await Promise.race([
+            axios.post(
+              'https://api.openai.com/v1/chat/completions',
+              {
+                model: "gpt-4",  // Use the specific model name you have access to
+                messages: [
+                  { role: 'user', content: message.text }
+                ],
+                max_tokens: 200,
+              },
+              {
+                headers: { Authorization: `Bearer ${openAiKey}` },
+              }
+            ),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('ChatGPT response timeout')), 15000))  // 15-second timeout
+          ]);
 
           const responseText = chatGptResponse.data.choices[0].message.content.trim();
           console.log("ChatGPT response:", responseText);
@@ -87,12 +90,15 @@ setInterval(() => {
             });
           }
 
-        } catch (axiosError) {
-          console.error("Error with OpenAI API request:", axiosError.response?.status, axiosError.response?.data);
+        } catch (error) {
+          console.error("Error with ChatGPT response:", error.message);
         }
       }
     }
   } catch (error) {
     console.error('Error running bot:', error);
+  } finally {
+    clearInterval(cleanupInterval);  // Clear the interval to allow the process to exit
+    process.exit(0);  // Explicitly exit the process
   }
 })();

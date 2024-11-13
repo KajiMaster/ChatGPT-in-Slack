@@ -2,7 +2,7 @@ name: Trigger ChatGPT Slack Bot
 
 on:
   workflow_dispatch: # Enables manual triggering from GitHub Actions
-    inputs: # Enables mention_payload for input for GHA
+    inputs: # Defines inputs for the workflow, including mention_payload from Slack
       mention_payload:
         description: "The message text from Slack"
         required: true
@@ -19,17 +19,17 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '20' # Ensures that Node.js version 20 is used
 
       - name: Install dependencies
-        run: npm install --verbose
+        run: npm install --verbose # Installs required Node.js dependencies for the bot
 
       - name: List node_modules to verify @slack/web-api
-        run: ls -R node_modules/@slack
+        run: ls -R node_modules/@slack # Verifies that @slack/web-api is correctly installed
 
       - name: Run ChatGPT Slack Bot
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} # Environment variable from GitHub Secrets
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}   # Environment variable from GitHub Secrets
         run: |
-          node scripts/poll_and_respond.js
+          node scripts/poll_and_respond.js # Executes the script to interact with Slack and OpenAI
